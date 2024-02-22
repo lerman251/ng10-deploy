@@ -3,7 +3,7 @@ import { Injectable } from "@angular/core";
 import { RecipeService } from "../recipes/recipe.service";
 import { Recipe } from "../recipes/recipe.model";
 import { exhaustMap, map, take, tap, throwError } from "rxjs";
-import { AuthSevice } from "../auth/auth.service";
+import { AuthService } from "../auth/auth.service";
 
 @Injectable({ providedIn: 'root' })
 
@@ -11,12 +11,15 @@ export class DataStorageService {
     constructor(
         private http: HttpClient, 
         private recipeService: RecipeService,
-        private authService: AuthSevice
+        private authService: AuthService
     ) {}
 
     storeRecipes() {
         const recipes = this.recipeService.getRecipes();
-        this.http.put('https://ng-access-backend-default-rtdb.firebaseio.com/recipes.json', recipes).subscribe(response => {
+        this.http
+        .put(
+            'https://ng-access-backend-default-rtdb.firebaseio.com/recipes.json', recipes)
+            .subscribe(response => {
             console.log(response);
         });
     }

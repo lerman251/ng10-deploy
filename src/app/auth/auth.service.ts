@@ -1,8 +1,11 @@
-import { HttpClient, HttpErrorResponse } from "@angular/common/http";
-import { Injectable } from "@angular/core";
-import { BehaviorSubject, catchError, tap, throwError } from "rxjs";
-import { User } from "./user.model";
-import { Router } from "@angular/router";
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { catchError, tap } from 'rxjs/operators';
+import { throwError, BehaviorSubject } from 'rxjs';
+
+import { User } from './user.model';
+import { environment } from 'src/environments/environment';
 
 export interface AuthResponseData {
     kind: string;
@@ -15,41 +18,42 @@ export interface AuthResponseData {
 }
 
 @Injectable({ providedIn: 'root' })
-export class AuthSevice {
+export class AuthService {
     user = new BehaviorSubject<User | null>(null);
     private tokenExpirationTimer: any;
 
     constructor(private http: HttpClient, private router: Router) {}
 
-    signup(email: string, Password: string) {
-        return this.http.post<AuthResponseData>(
-            'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyDOA-Gwzzc32ySERgxzrLpewAffhI3zaJ0', 
+    signup(email: string, password: string) {
+        return this.http
+        .post<AuthResponseData>(
+            'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + environment.firebaseAPIKey, 
             {
                 email: email,
-                password: Password,
+                password: password,
                 returnSecureToken: true
             }
-        ).pipe(catchError(this.handleError), tap(resData => {
-            const experationDate = new Date(
-                new Date().getTime() + +resData.expiresIn * 1000
-                );
-                const user = new User(
+        )
+        .pipe(
+            catchError(this.handleError),
+            tap(resData => {
+                this.handleAuthentication(
                     resData.email, 
                     resData.localId, 
                     resData.idToken, 
-                    experationDate
+                    +resData.expiresIn
                 );
-                this.user.next(user);
             })
         );
     }
 
-    login(email: string, Password: string) {
-        return this.http.post<AuthResponseData>(
-            'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDOA-Gwzzc32ySERgxzrLpewAffhI3zaJ0',
+    login(email: string, password: string) {
+        return this.http
+        .post<AuthResponseData>(
+            'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + environment.firebaseAPIKey,
             {
                 email: email,
-                password: Password,
+                password: password,
                 returnSecureToken: true
             }
         )
@@ -87,7 +91,8 @@ export class AuthSevice {
         if (loadedUser.token) {
             this.user.next(loadedUser);
             const expirationDuration = 
-                new Date(userData._tokenExpirationDate).getTime() - new Date().getTime();
+                new Date(userData._tokenExpirationDate).getTime() -
+                new Date().getTime();
             this.autoLogout(expirationDuration);
         }
     }
@@ -114,8 +119,8 @@ export class AuthSevice {
         token: string, 
         expiresIn: number
     ) {
-        const experationDate = new Date(new Date().getTime() + expiresIn * 1000);
-        const user = new User(email, userId, token, experationDate);
+        const expirationDate = new Date(new Date().getTime() + expiresIn * 1000);
+        const user = new User(email, userId, token, expirationDate);
         this.user.next(user);
         this.autoLogout(expiresIn * 1000);
         localStorage.setItem('userData', JSON.stringify(user));
